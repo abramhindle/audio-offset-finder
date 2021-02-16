@@ -1,1 +1,1 @@
-from audio_offset_finder import *
+from .audio_offset_finder import *

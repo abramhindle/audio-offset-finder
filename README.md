@@ -4,16 +4,20 @@ audio-offset-finder
 A simple tool for finding the offset of an audio file within another
 file. 
 
-Uses cross-correlation of standardised Mel-Frequency Cepstral Coefficients,
+Uses cross-correlation of standardized Mel-Frequency Cepstral Coefficients,
 so should be relatively robust to noise (encoding, compression, etc).
 
 It uses ffmpeg for transcoding, so should work on all file formats
 supported by ffmpeg.
 
 It was updated from the BBC code because the MFCC's performed poorly. We use
-librosa now and whole raft of MIR features to do the correlation.
+`librosa` now and whole raft of MIR features to do the correlation.
 
-I've also allowed remixing of videos with the --ffmpeg flag
+The program will remix to generate a synced new video by default, you can
+disable it with the `--not-generate` flag
+
+You may shoot multiple videos during one audio recording, so you can sync 
+multiple videos to one audio in one command. 
 
 Installation
 ------------
@@ -23,64 +27,87 @@ Installation
 Usage
 -----
 
+There are two kinds of usage
+
+#### Command line usage
+
+```
+$ audio-offset-finder audio.wav video1.mp4 video2.mkv video3.avi
+```
+
     $ audio-offset-finder --help
-    $ audio-offset-finder --find-offset-of file1.wav --within file2.wav
-    Offset: 300 (seconds)
+    usage: audio-offset-finder [-h] [--version] [--offset Minutes]
+                               [--trim Minutes] [--sr SampleRate]
+                               [--format Format] [--not-generate]
+                               [--plotit]
+                               Audio Video [Video ...]
+    
+    Purpose： Get the offset of a video sound to another audio, and
+    replace the audio. Example: Record vlog, use a recorder for better
+    sound, then sync the audio.
+    
+    positional arguments:
+      Audio             Offset to find within
+      Video             Video to find the offset of（Can be more than
+                        one）
+    
+    optional arguments:
+      -h, --help        show this help message and exit
+      --version         show program's version number and exit
+      --offset Minutes  Neglect how many minutes of the audio (in case
+                        your audio is very long) (default: 0)
+      --trim Minutes    Using how many minutes of audio as one clip to
+                        analyse with (default: 15)
+      --sr SampleRate   When resample audio, what the target sample rate
+                        should be (default: 16000)
+      --format Format   Output audio format such as: mp4, mkv (default:
+                        mp4)
+      --not-generate    Do not use FFmpeg to generate new video
+                        (default: False)
+      --plotit          Show the plot picture of the analyse (default:
+                        False)
 
-New FFMpeg features!
+#### Text guide usage
 
-    @piggy:~/projects/audio-offset-finder$ python3 bin/audio-offset-finder --find-offset-of /media/hindle1/MyMedia3/Videos/20190629/001NOAH/MVI_4417.MOV  \
-                                                                           --within /media/hindle1/MyMedia3/Videos/20190629/001NOAH/ZOOM0006.WAV \
-                                                                           --ffmpeg
-    Ref samples: 17654656 Find samples: 10964954
-    ...
-    Best matching window: 938
-    Offset: 30.015782379212343 (seconds)
-    Standard score: 20.952581258700146
-    ffmpeg -i '/media/hindle1/MyMedia3/Videos/20190629/001NOAH/MVI_4417.MOV' -ss  '30.015782379212343' -i /media/hindle1/MyMedia3/Videos/20190629/001NOAH/ZOOM0006.WAV -map 0:v -map 1:a  -c copy -shortest '/media/hindle1/MyMedia3/Videos/20190629/001NOAH/MVI_4417.MOV.sync.mkv'
-    ffmpeg version 4.1.4-0york3~18.04 Copyright (c) 2000-2019 the FFmpeg developers
-      built with gcc 7 (Ubuntu 7.4.0-1ubuntu1~18.04.1)
-    ...
-    Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/media/hindle1/MyMedia3/Videos/20190629/001NOAH/MVI_4417.MOV':
-      Metadata:
-        major_brand     : qt  
-        minor_version   : 537331968
-        compatible_brands: qt  CAEP
-        creation_time   : 2019-06-28T19:30:42.000000Z
-      Duration: 00:11:25.31, start: 0.000000, bitrate: 46288 kb/s
-        Stream #0:0(eng): Video: h264 (Constrained Baseline) (avc1 / 0x31637661), yuvj420p(pc, smpte170m/bt709/bt709), 1920x1080, 44750 kb/s, 23.98 fps, 23.98 tbr, 24k tbn, 48k tbc (default)
-        Metadata:
-          creation_time   : 2019-06-28T19:30:42.000000Z
-        Stream #0:1(eng): Audio: pcm_s16le (sowt / 0x74776F73), 48000 Hz, stereo, s16, 1536 kb/s (default)
-        Metadata:
-          creation_time   : 2019-06-28T19:30:42.000000Z
-    Guessed Channel Layout for Input Stream #1.0 : stereo
-    Input #1, wav, from '/media/hindle1/MyMedia3/Videos/20190629/001NOAH/ZOOM0006.WAV':
-      Metadata:
-        encoded_by      : ZOOM Handy Recorder H1
-        date            : 2010-06-21
-        creation_time   : 19:50:32
-        time_reference  : 6857472000
-        coding_history  : A=PCM,F=96000,W=24,M=stereo,T=ZOOM Handy Recorder H1
-      Duration: 00:18:23.42, bitrate: 4608 kb/s
-        Stream #1:0: Audio: pcm_s24le ([1][0][0][0] / 0x0001), 96000 Hz, stereo, s32 (24 bit), 4608 kb/s
-    File '/media/hindle1/MyMedia3/Videos/20190629/001NOAH/MVI_4417.MOV.sync.mkv' already exists. Overwrite ? [y/N] y
-    Output #0, matroska, to '/media/hindle1/MyMedia3/Videos/20190629/001NOAH/MVI_4417.MOV.sync.mkv':
-      Metadata:
-        major_brand     : qt  
-        minor_version   : 537331968
-        compatible_brands: qt  CAEP
-        encoder         : Lavf58.20.100
-        Stream #0:0(eng): Video: h264 (Constrained Baseline) (avc1 / 0x31637661), yuvj420p(pc, smpte170m/bt709/bt709), 1920x1080, q=2-31, 44750 kb/s, 23.98 fps, 23.98 tbr, 1k tbn, 24k tbc (default)
-        Metadata:
-          creation_time   : 2019-06-28T19:30:42.000000Z
-        Stream #0:1: Audio: pcm_s24le ([1][0][0][0] / 0x0001), 96000 Hz, stereo, s32 (24 bit), 4608 kb/s
-    Stream mapping:
-      Stream #0:0 -> #0:0 (copy)
-      Stream #1:0 -> #0:1 (copy)
-    Press [q] to stop, [?] for help
-    frame=16431 fps=655 q=-1.0 Lsize= 4129923kB time=00:11:25.26 bitrate=49370.9kbits/s speed=27.3x    
-    video:3743607kB audio:385467kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 0.020552%
+```
+$ audio-offset-finder
+
+You haven't pass any audio or video files.
+So this short message shall guide you.
+
+This program is used to replace the audio of a video to
+another audio recordered in another device, such as:
+
+  * Using a camera to record a video
+  * Carry a audio recorder or phone to record a better quality audio
+  * Replace the camera audio the the higher quality audio automaticlly
+
+The audio is normally considered longer than the video.
+So this process can be thought as:
+    Find the offset of video sound (target) in another better quality
+audio file (scope), and replace the video sound automaticlly.
+
+
+First input the audio（scope）
+Please input the file path or drag it in: audio.aac
+
+Then input the video（target）
+Please input the file path or drag it in: child.mp4
+
+Total task count: 1, processing No.1 : child.mp4
+
+The offset calculated is: 5.9889154800422
+The score is: 33.88101201927532
+    (Score higher than 8 is considered qualified.)
+FFmpeg command：
+    ffmpeg -y -hide_banner -i "child.mp4" -ss 599.9889154800422 -i "audio.aac" -map 0:v:0 -map 1:a:0  -c:v copy -shortest "child.mp4.sync.5.99.mp4"
+
+......
+
+Mission complete, enter to finish
+```
+
+
 
 
 Testing
